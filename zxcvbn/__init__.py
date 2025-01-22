@@ -2,12 +2,8 @@ from datetime import datetime
 
 from . import matching, scoring, time_estimates, feedback
 
-PASSWORD_MAX_LENGTH = 72
 
 def zxcvbn(password, user_inputs=None):
-    # Throw error if password exceeds max length
-    if len(password) > PASSWORD_MAX_LENGTH:
-        raise ValueError(f"Password length exceeds {PASSWORD_MAX_LENGTH} characters.")
     try:
         # Python 2 string types
         basestring = (str, unicode)
@@ -29,7 +25,10 @@ def zxcvbn(password, user_inputs=None):
     ranked_dictionaries = matching.RANKED_DICTIONARIES
     ranked_dictionaries['user_inputs'] = matching.build_ranked_dict(sanitized_inputs)
 
+    print("OMNIMATCH started")
+    omnimatch_start = datetime.now()
     matches = matching.omnimatch(password, ranked_dictionaries)
+    print(f"OMNIMATCH completed in {datetime.now() - omnimatch_start}")
     result = scoring.most_guessable_match_sequence(password, matches)
     result['calc_time'] = datetime.now() - start
 

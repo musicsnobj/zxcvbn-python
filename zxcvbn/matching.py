@@ -1,6 +1,7 @@
 from zxcvbn import scoring
 from . import adjacency_graphs
 from zxcvbn.frequency_lists import FREQUENCY_LISTS
+from datetime import datetime
 import re
 
 from zxcvbn.scoring import most_guessable_match_sequence
@@ -97,6 +98,8 @@ def dictionary_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
     matches = []
     length = len(password)
     password_lower = password.lower()
+    print("MATCHING:dictionary_match start")
+    start = datetime.now()
     for dictionary_name, ranked_dict in _ranked_dictionaries.items():
         for i in range(length):
             for j in range(i, length):
@@ -114,20 +117,22 @@ def dictionary_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
                         'reversed': False,
                         'l33t': False,
                     })
-
+    print(f"MATCHING:dictionary_match completed in {datetime.now() - start}")
     return sorted(matches, key=lambda x: (x['i'], x['j']))
 
 
 def reverse_dictionary_match(password,
                              _ranked_dictionaries=RANKED_DICTIONARIES):
     reversed_password = ''.join(reversed(password))
+    print("MATCHING:reverse_dictionary_match start")
+    start = datetime.now()
     matches = dictionary_match(reversed_password, _ranked_dictionaries)
     for match in matches:
         match['token'] = ''.join(reversed(match['token']))
         match['reversed'] = True
         match['i'], match['j'] = len(password) - 1 - match['j'], \
                                  len(password) - 1 - match['i']
-
+    print(f"MATCHING:reverse_dictionary_match completed in {datetime.now() - start}")
     return sorted(matches, key=lambda x: (x['i'], x['j']))
 
 
@@ -148,7 +153,6 @@ def relevant_l33t_subtable(password, table):
 def enumerate_l33t_subs(table):
     keys = list(table.keys())
     subs = [[]]
-
     def dedup(subs):
         deduped = []
         members = {}
@@ -202,6 +206,8 @@ def enumerate_l33t_subs(table):
 
 
 def translate(string, chr_map):
+    print("MATCHING:translate start")
+    start = datetime.now()
     chars = []
     for char in list(string):
         if chr_map.get(char, False):
@@ -209,15 +215,19 @@ def translate(string, chr_map):
         else:
             chars.append(char)
 
+    print(f"MATCHING:translate completed in {datetime.now() - start}")
     return ''.join(chars)
 
 
 def l33t_match(password, _ranked_dictionaries=RANKED_DICTIONARIES,
                _l33t_table=L33T_TABLE):
     matches = []
-
-    for sub in enumerate_l33t_subs(
-            relevant_l33t_subtable(password, _l33t_table)):
+    print("MATCHING:l33t_match start")
+    start = datetime.now()
+    subs = enumerate_l33t_subs(
+            relevant_l33t_subtable(password, _l33t_table))
+    print(f"(we'll be calling translate and dictionary_match methods {len(subs)} times each)")
+    for sub in subs:
         if not len(sub):
             break
 
@@ -243,6 +253,7 @@ def l33t_match(password, _ranked_dictionaries=RANKED_DICTIONARIES,
 
     matches = [match for match in matches if len(match['token']) > 1]
 
+    print(f"MATCHING:l33t_match completed in {datetime.now() - start}")
     return sorted(matches, key=lambda x: (x['i'], x['j']))
 
 
@@ -253,6 +264,8 @@ def repeat_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
     lazy = re.compile(r'(.+?)\1+')
     lazy_anchored = re.compile(r'^(.+?)\1+$')
     last_index = 0
+    print("MATCHING:repeat_match start")
+    start = datetime.now()
     while last_index < len(password):
         greedy_match = greedy.search(password, pos=last_index)
         lazy_match = lazy.search(password, pos=last_index)
@@ -295,14 +308,17 @@ def repeat_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
         })
         last_index = j + 1
 
+    print(f"MATCHING:repeat_match completed in {datetime.now() - start}")
     return matches
 
 
 def spatial_match(password, _graphs=GRAPHS, _ranked_dictionaries=RANKED_DICTIONARIES):
     matches = []
+    print("MATCHING:spatial_match start")
+    start = datetime.now()
     for graph_name, graph in _graphs.items():
         matches.extend(spatial_match_helper(password, graph, graph_name))
-
+    print(f"MATCHING:spatial_match completed in {datetime.now() - start}")
     return sorted(matches, key=lambda x: (x['i'], x['j']))
 
 
@@ -395,6 +411,8 @@ def sequence_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
     if len(password) == 1:
         return []
 
+    print("MATCHING:sequence_match start")
+    start = datetime.now()
     def update(i, j, delta):
         if j - i > 1 or (delta and abs(delta) == 1):
             if 0 < abs(delta) <= MAX_DELTA:
@@ -437,11 +455,14 @@ def sequence_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
         last_delta = delta
     update(i, len(password) - 1, last_delta)
 
+    print(f"MATCHING:sequence_match completed in {datetime.now() - start}")
     return result
 
 
 def regex_match(password, _regexen=REGEXEN, _ranked_dictionaries=RANKED_DICTIONARIES):
     matches = []
+    print("MATCHING:regex_match start")
+    start = datetime.now()
     for name, regex in _regexen.items():
         for rx_match in regex.finditer(password):
             matches.append({
@@ -452,7 +473,7 @@ def regex_match(password, _regexen=REGEXEN, _ranked_dictionaries=RANKED_DICTIONA
                 'regex_name': name,
                 'regex_match': rx_match,
             })
-
+    print(f"MATCHING:regex_match completed in {datetime.now() - start}")
     return sorted(matches, key=lambda x: (x['i'], x['j']))
 
 
@@ -480,7 +501,8 @@ def date_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
     maybe_date_with_separator = re.compile(
         r'^(\d{1,4})([\s/\\_.-])(\d{1,2})\2(\d{1,4})$'
     )
-
+    print("MATCHING:date_match start")
+    start = datetime.now()
     # dates without separators are between length 4 '1191' and 8 '11111991'
     for i in range(len(password) - 3):
         for j in range(i + 3, i + 8):
@@ -573,7 +595,7 @@ def date_match(password, _ranked_dictionaries=RANKED_DICTIONARIES):
                 is_submatch = True
                 break
         return not is_submatch
-
+    print(f"MATCHING:date_match completed in {datetime.now() - start}")
     return sorted(filter(filter_fun, matches), key=lambda x: (x['i'], x['j']))
 
 

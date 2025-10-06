@@ -23,10 +23,9 @@ def get_ranked_dictionaries():
         # Do the expensive import here only
         from zxcvbn.frequency_lists import FREQUENCY_LISTS
 
-        # Build the dictionary once
-        RANKED_DICTIONARIES = {}
-        for name, lst in FREQUENCY_LISTS.items():
-          RANKED_DICTIONARIES[name] = build_ranked_dict(lst)
+        # Build in local scope before adding to global scope for thread safety
+        built_dict = {name: build_ranked_dict(lst) for name, lst in FREQUENCY_LISTS.items()}
+        RANKED_DICTIONARIES = built_dict
     return RANKED_DICTIONARIES
 
 

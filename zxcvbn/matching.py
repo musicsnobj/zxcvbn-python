@@ -2,6 +2,7 @@ from zxcvbn import scoring
 from . import adjacency_graphs
 import re
 import functools
+import copy
 
 from zxcvbn.scoring import most_guessable_match_sequence
 
@@ -38,6 +39,12 @@ def ensure_ranked_dictionaries(func):
             kwargs['_ranked_dictionaries'] = get_ranked_dictionaries()
         return func(*args, **kwargs)
     return wrapper
+
+
+@ensure_ranked_dictionaries
+def add_frequency_lists(frequency_lists_, *, _ranked_dictionaries):
+    for name, lst in frequency_lists_.items():
+        _ranked_dictionaries[name] = build_ranked_dict(lst)
 
 
 GRAPHS = {
@@ -98,7 +105,8 @@ DATE_SPLITS = {
 # omnimatch -- perform all matches
 @ensure_ranked_dictionaries
 def omnimatch(password, _ranked_dictionaries=None, user_inputs=[]):
-    if len(user_inputs):
+    if _ranked_dictionaries is not None and user_inputs:
+        _ranked_dictionaries = copy.copy(_ranked_dictionaries)
         _ranked_dictionaries['user_inputs'] = build_ranked_dict(user_inputs)
 
     matches = []
